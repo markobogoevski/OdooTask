@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_product_template,access_product_template,product.model_product_template,base.group_user,1,1,1,1
+access_product_category,access_product_category,product.model_product_category,base.group_user,1,1,1,1
+access_excel_import_wizard,access_excel_import_wizard,tech_gear_inventory.model_tech_gear_excel_import_wizard,base.group_user,1,1,1,1

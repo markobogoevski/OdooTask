@@ -1,0 +1,16 @@
+<odoo>
+    <!-- Top-Level Menu for Tech Gear Inventory -->
+    <menuitem id="tech_gear_inventory_menu" name="Tech Gear Inventory"/>
+
+    <!-- Product Categories Menu under Tech Gear Inventory -->
+    <menuitem id="tech_gear_inventory_menu_product_category"
+              name="Product Categories"
+              parent="tech_gear_inventory_menu"
+              action="tech_gear_inventory_action_product_category"/>
+
+    <!-- Excel Import Wizard Menu under Tech Gear Inventory -->
+    <menuitem id="tech_gear_inventory_menu_excel_import_wizard"
+              name="Import Product Data"
+              parent="tech_gear_inventory_menu"
+              action="tech_gear_inventory_action_excel_import_wizard"/>
+</odoo>
