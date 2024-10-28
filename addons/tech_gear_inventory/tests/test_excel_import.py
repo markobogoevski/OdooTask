@@ -1,4 +1,5 @@
 import base64
+import os
 import re
 from io import BytesIO
 from odoo.tests import TransactionCase
@@ -10,7 +11,8 @@ class TestExcelImport(TransactionCase):
         """Set up necessary test data."""
         super(TestExcelImport, self).setUp()
         # Sample test file
-        self.test_file_path = 'F:/odoo_task/tech_gear/addons/tech_gear_inventory/tests/test_data.xlsx'
+        test_dir = os.path.dirname(os.path.abspath(__file__))
+        self.test_file_path = os.path.join(test_dir, 'test_data.xlsx')
         self.category_manager = CategoryManager(self.env)
         self.product_manager = ProductManager(self.env)
 
