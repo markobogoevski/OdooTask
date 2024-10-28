@@ -1,5 +1,3 @@
-Odoo Development Assignment
-Overview
 You have been tasked with creating a custom Odoo module for a fictional company,
 "Tech Gear Inc." This company sells a variety of electronic devices and accessories.
 The module should streamline their inventory management by integrating existing
@@ -40,7 +38,6 @@ product_category model.
 • Ensure the existing menus are extended or updated to navigate to each
 model's views appropriately, and run the importer.
 
-Euregiopark 2A 6467JE Kerkrade +31 (0) 85 301 57 41 info@wesolved.com www.wesolved.com
 6. Functional Requirements
 • Excel File Parsing: Ensure that the module correctly parses
 an Excel file and updates the database accordingly.
