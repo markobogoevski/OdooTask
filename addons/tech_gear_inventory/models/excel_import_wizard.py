@@ -22,15 +22,20 @@ class ProductData:
         Validate row data and log errors if necessary.
         This method updates the is_valid attribute based on validation outcome.
         """
+        self.is_valid = True  # Start by assuming the row is valid
+
         if not self.product_name or not self.category_name:
             error_log.append(_("Row %d: Missing 'Product Name' or 'Category'.") % self.row_index)
             self.is_valid = False
-        elif not isinstance(self.price, (int, float)):
+
+        if not isinstance(self.price, (int, float)):
             error_log.append(_("Row %d: Invalid price '%s' - must be numeric.") % (self.row_index, self.price))
             self.is_valid = False
-        elif not isinstance(self.quantity, (int, float)):
+
+        if not isinstance(self.quantity, (int, float)):
             error_log.append(_("Row %d: Invalid quantity '%s' - must be numeric.") % (self.row_index, self.quantity))
             self.is_valid = False
+
         return self.is_valid
 
 
@@ -41,21 +46,34 @@ class CategoryManager:
         self.env = env
         self.category_cache = {}  # Cache for categories to minimize DB queries
 
-    def get_or_create(self, category_name):
+    def get_or_create(self, category_name, category_description):
         """
         Retrieve or create a product category based on its name.
+        Updates the description if the category already exists.
         Uses a cache to reduce database queries for repeated categories in the same import.
         """
+        # Check if the category is cached
         if category_name in self.category_cache:
-            return self.category_cache[category_name]
+            category = self.category_cache[category_name]
+            # Update description if needed for cached category
+            if category.description != category_description:
+                category.write({'description': category_description})
+            return category
 
+        # Search for an existing category by name
         category = self.env['product.category'].search([('name', '=', category_name)], limit=1)
-        if not category:
-            category = self.env['product.category'].create([{
+        if category:
+            # Update the description if it's different
+            if category.description != category_description:
+                category.write({'description': category_description})
+        else:
+            # Create a new category with the given name and description
+            category = self.env['product.category'].create({
                 'name': category_name,
-                'description': category_name
-            }])
+                'description': category_description
+            })
 
+        # Cache the result after any necessary updates
         self.category_cache[category_name] = category
         return category
 
@@ -81,8 +99,8 @@ class ProductManager:
             to_create = []
 
             for product_data in batch:
-                # Get or create the category first
-                category = category_manager.get_or_create(product_data.category_name)
+                # Get or create the category with name and description (they are the same because of the example excel file)
+                category = category_manager.get_or_create(product_data.category_name, product_data.category_name)
 
                 # Check if the product already exists
                 product = self.env['product.template'].search([
@@ -132,15 +150,11 @@ class ExcelImportWizard(models.TransientModel):
     _description = 'Excel Import Wizard for Tech Gear Inventory'
 
     file = fields.Binary("File", required=True)
-    error_log_file = fields.Binary("Error Log File", readonly=True)
+    error_log_file = fields.Binary("Error Log File", readonly=True, attachment=True)
+    error_log_filename = fields.Char("Error Log Filename", readonly=True, default="error_log.txt")
     chunk_size = fields.Integer("Chunk Size", default=100, help="Number of records to process in each batch")
 
     def import_excel(self):
-        """
-        Main function to import an Excel file and process its contents.
-        This function handles file decoding, validation, and batch processing of valid rows.
-        :raises ValidationError: if there are errors in the Excel file
-        """
         # Load the sheet and initialize components
         sheet = self._load_excel_sheet()
         category_manager = CategoryManager(self.env)
@@ -159,16 +173,52 @@ class ExcelImportWizard(models.TransientModel):
         # Process valid rows in batch and generate error log file if necessary
         product_manager.batch_update_or_create(valid_rows, category_manager, error_log, chunk_size=self.chunk_size)
 
+        # If errors occurred, generate the error log file and open a dialog with a download button
         if error_log:
             self._generate_error_log_file(error_log)
-            raise ValidationError(_("Import completed with errors. Please download the error log file."))
+            return {
+                'type': 'ir.actions.act_window',
+                'res_model': 'tech.gear.excel.import.wizard',
+                'view_mode': 'form',
+                'res_id': self.id,
+                'target': 'new',
+                'name': _("Import Completed with Errors"),
+                'view_id': self.env.ref(
+                    "tech_gear_inventory.tech_gear_inventory_view_excel_import_wizard_error_dialog").id
+            }
+        else:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _("Import Successful"),
+                    'message': _("The product data has been successfully imported."),
+                    'sticky': False,
+                }
+            }
+
+    def download_error_log(self):
+        """
+        Allows users to download the error log file after the import process if errors are present.
+        """
+        if self.error_log_file:
+            return {
+                'type': 'ir.actions.act_url',
+                'url': f'/web/content/{self._name}/{self.id}/error_log_file/{self.error_log_filename}',
+                'target': 'self',
+            }
+        else:
+            raise ValidationError(_("No error log file available for download."))
+
+    def _generate_error_log_file(self, error_log):
+        log_content = "\n".join(error_log)
+        log_file = BytesIO()
+        log_file.write(log_content.encode('utf-8'))
+        log_file.seek(0)
+        self.error_log_file = base64.b64encode(log_file.read())
+        log_file.close()
 
     def _load_excel_sheet(self):
-        """
-        Load and return the first sheet from the uploaded Excel file.
-        :return: The active sheet of the workbook
-        :raises ValidationError: if the Excel file cannot be loaded
-        """
         try:
             data = base64.b64decode(self.file)
             workbook = openpyxl.load_workbook(filename=BytesIO(data), data_only=True)
@@ -176,14 +226,3 @@ class ExcelImportWizard(models.TransientModel):
         except Exception as e:
             raise ValidationError(_("Unable to load the Excel file. Ensure it's a valid file. Error: %s") % str(e))
 
-    def _generate_error_log_file(self, error_log):
-        """
-        Generate a downloadable error log file from the list of errors.
-        :param error_log: List of error messages
-        """
-        log_content = "\n".join(error_log)
-        log_file = BytesIO()
-        log_file.write(log_content.encode('utf-8'))
-        log_file.seek(0)
-        self.error_log_file = base64.b64encode(log_file.read())
-        log_file.close()

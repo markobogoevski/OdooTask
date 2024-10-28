@@ -1,0 +1,17 @@
+<odoo>
+    <!-- Dialog view for Download Error Log -->
+    <record id="tech_gear_inventory_view_excel_import_wizard_error_dialog" model="ir.ui.view">
+        <field name="name">tech.gear.excel.import.wizard.error.dialog</field>
+        <field name="model">tech.gear.excel.import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Import Completed with Errors">
+                <sheet>
+                    <group>
+                        <p>Errors occurred during the import process. You can download the error log for details.</p>
+                        <button string="Download Error Log" type="object" name="download_error_log" class="btn-primary"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>

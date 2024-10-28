@@ -20,9 +20,10 @@ _The Tech Gear Inventory module is an Odoo add-on that simplifies and automates 
     * Error Logging: Logs any errors found during validation and processing, with specific details such as row number and error type (e.g., missing field or incorrect data type).
 
 4. UI Components:
-    * Custom form and list views for Product Category and Product Template to facilitate product and category management.
+    * Custom form and list views for Product Category and Product Template to facilitate product and category management. These override the parent views for Template and Category to only include relevant fields from the excel file.
     * A top-level menu for easy navigation, including options to manage categories, products, and initiate the Excel import wizard.
     * An Excel import wizard that provides an intuitive UI for file selection and initiates the import and validation process.
+    * An Excel import error view that enables the user to navigate to a page where the error is logged.
 
 ### Module Structure
 
@@ -41,6 +42,7 @@ Custom views are provided for managing Product Template and Product Category, as
 * Product Category View: The category view allows users to view existing categories. The description field in each category is customizable.
 * Product Template View: This view shows products with details like Price, Quantity, and Category.
 * Excel Import Wizard View: A form for uploading an Excel file and initiating the import process. Once an import is complete, users can download an error log file if any issues were encountered.
+* Excel Import Error Log View: Enables the user to see the error logs if any were present during the import. 
 
 #### 3. Models
 
@@ -118,8 +120,8 @@ Unit tests cover the following components:
 To run the tests:
 
 
-- Run Odoo's built-in test runner
-`python3 odoo-bin -i tech_gear_inventory --test-enable`
+- Run Odoo's built-in test runner (Replace with Odoo's python interpreter, odoo-bin path and the database name, mine is odoo18)
+`F:\OdooServer\python\python.exe F:\OdooServer\server\odoo-bin -d odoo18 -i tech_gear_inventory --test-enable --stop-after-init --log-level=test`
 
 ### Configuration Configurable Parameters
 
@@ -132,7 +134,7 @@ tech_gear_inventory_chunk_size=100  # default value, adjust as necessary`
 
 ### Limitations and Considerations
 
-* Error Handling: This module logs and skips rows with errors rather than halting the import, allowing for partial success and facilitating correction on re-import.
+* Error Handling: This module logs and skips rows with errors rather than halting the import, allowing for partial success and facilitating correction on re-import. This doesn't stop the import process, rather only skips invalid rows. Re-importing the file with the corrected rows will only add those and update the previous ones. It won't add duplicates nor corrupt the data.
 * Concurrent Imports: Ensure that multiple users don’t import simultaneously to avoid conflicting updates.
 
 ### Github link

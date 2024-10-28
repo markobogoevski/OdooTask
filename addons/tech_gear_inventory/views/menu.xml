@@ -4,9 +4,15 @@
 
     <!-- Product Categories Menu under Tech Gear Inventory -->
     <menuitem id="tech_gear_inventory_menu_product_category"
-              name="Product Categories"
+              name="Categories"
               parent="tech_gear_inventory_menu"
               action="tech_gear_inventory_action_product_category"/>
+
+    <!-- Product Template Menu under Tech Gear Inventory -->
+    <menuitem id="tech_gear_inventory_menu_product_template"
+              name="Products"
+              parent="tech_gear_inventory_menu"
+              action="tech_gear_inventory_action_product_template"/>
 
     <!-- Excel Import Wizard Menu under Tech Gear Inventory -->
     <menuitem id="tech_gear_inventory_menu_excel_import_wizard"

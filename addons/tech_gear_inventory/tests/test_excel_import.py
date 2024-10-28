@@ -1,17 +1,16 @@
 import base64
+import re
 from io import BytesIO
 from odoo.tests import TransactionCase
 from odoo.exceptions import ValidationError
-from addons.tech_gear_inventory.models.excel_import_wizard import ProductData, CategoryManager, \
-    ProductManager
-
+from odoo.addons.tech_gear_inventory.models.excel_import_wizard import ProductData, CategoryManager, ProductManager
 
 class TestExcelImport(TransactionCase):
     def setUp(self):
         """Set up necessary test data."""
         super(TestExcelImport, self).setUp()
         # Sample test file
-        self.test_file_path = 'tech_gear_inventory/tests/test_data.xlsx'
+        self.test_file_path = 'F:/odoo_task/tech_gear/addons/tech_gear_inventory/tests/test_data.xlsx'
         self.category_manager = CategoryManager(self.env)
         self.product_manager = ProductManager(self.env)
 
@@ -49,18 +48,19 @@ class TestExcelImport(TransactionCase):
         self.assertIn("Row 5: Missing 'Product Name' or 'Category'.", error_log[-1])
 
     def test_category_manager_get_or_create(self):
-        """Test the get_or_create method of CategoryManager with caching."""
-        # Attempt to retrieve or create a category
-        category = self.category_manager.get_or_create("New Category")
+        """Test the get_or_create method of CategoryManager with caching and description updates."""
+        # Create category initially
+        category = self.category_manager.get_or_create("Update Category", "Initial Description")
+        self.assertEqual(category.description, "Initial Description",
+                         "Category description should match initial input.")
 
-        # Verify that the category was created
-        self.assertTrue(category, "Category creation failed.")
-        self.assertEqual(category.name, "New Category", "Category name mismatch.")
+        # Update description
+        updated_category = self.category_manager.get_or_create("Update Category", "Updated Description")
+        self.assertEqual(updated_category.description, "Updated Description", "Category description should update.")
 
-        # Cache should now contain the category
-        cached_category = self.category_manager.get_or_create("New Category")
-        self.assertEqual(category.id, cached_category.id, "Expected cached category ID to "
-                                                          "match created category ID.")
+        # Check cache for consistency
+        cached_category = self.category_manager.get_or_create("Update Category", "Updated Description")
+        self.assertEqual(updated_category.id, cached_category.id, "Expected cached category ID to match updated ID.")
 
     def test_product_manager_batch_update_or_create(self):
         """Test the batch_update_or_create method of ProductManager with chunked batch processing."""
@@ -91,9 +91,11 @@ class TestExcelImport(TransactionCase):
         # Verify no errors
         self.assertFalse(error_log, f"Unexpected errors found: {error_log}")
 
+    import re
+
     def test_excel_import(self):
         """Test the entire import workflow in ExcelImportWizard with valid and invalid data."""
-        # Read test file and encode it
+        # Read and encode test file
         with open(self.test_file_path, 'rb') as file:
             encoded_file = base64.b64encode(file.read())
 
@@ -103,7 +105,7 @@ class TestExcelImport(TransactionCase):
             'chunk_size': 2  # Custom chunk size for testing
         })
 
-        # Attempt import
+        # Run import and check for both valid and invalid data
         try:
             wizard.import_excel()
         except ValidationError as e:
@@ -111,12 +113,25 @@ class TestExcelImport(TransactionCase):
             error_log_content = error_log_file.read().decode('utf-8')
             self.fail(f"Import failed with ValidationError: {str(e)}\nError Log:\n{error_log_content}")
 
-        # Verify products were created based on sample data
+        # Check if products were created for valid data rows
         product_a = self.env['product.template'].search([('name', '=', 'Sample Product A')])
         product_b = self.env['product.template'].search([('name', '=', 'Sample Product B')])
 
         self.assertTrue(product_a, "Sample Product A import failed.")
         self.assertTrue(product_b, "Sample Product B import failed.")
+
+        # Verify error logging for invalid rows dynamically
+        if wizard.error_log_file:
+            error_log_file = BytesIO(base64.b64decode(wizard.error_log_file))
+            error_log_content = error_log_file.read().decode('utf-8')
+
+            # Define patterns to look for specific error types
+            price_error_pattern = re.compile(r"Row \d+: Invalid price '.*' - must be numeric.")
+            missing_data_pattern = re.compile(r"Row \d+: Missing 'Product Name' or 'Category'.")
+
+            # Assert patterns exist in the log content
+            self.assertRegex(error_log_content, price_error_pattern, "Price error log entry missing.")
+            self.assertRegex(error_log_content, missing_data_pattern, "Missing data error log entry missing.")
 
     def test_error_logging(self):
         """Test error logging functionality in import_excel method."""

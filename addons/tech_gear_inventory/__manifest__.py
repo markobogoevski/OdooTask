@@ -13,7 +13,9 @@
     'data': [
         'security/ir.model.access.csv',
         'views/excel_import_wizard_view.xml',
+        'views/excel_import_wizard_error_dialog.xml',
         'views/product_category_view.xml',
+        'views/product_template_view.xml',
         'views/menu.xml',
     ],
     'installable': True,
